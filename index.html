@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prediction Engines</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#1a1d24; --line:#2a2f3a; --txt:#e8eaed; --mut:#9aa0aa;
+    --live:#2ea043; --season:#3b82f6; --off:#6b7280; --accent:#2ea043;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;padding:24px 16px;max-width:880px;margin:0 auto;min-height:100vh}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  h1{font-size:1.6rem;margin:.1em 0}
+  .sub{color:var(--mut);font-size:.9rem;max-width:560px}
+  .toggle{cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--txt);
+    border-radius:6px;padding:6px 12px;font-size:.85rem;flex-shrink:0}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:22px}
+  @media(min-width:560px){.grid{grid-template-columns:1fr 1fr}}
+  @media(min-width:840px){.grid{grid-template-columns:1fr 1fr 1fr}}
+  .card{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:18px;text-decoration:none;color:inherit;
+    transition:border-color .15s, transform .15s;min-height:150px}
+  .card:hover,.card:focus{border-color:var(--accent);transform:translateY(-2px);outline:none}
+  .card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .ctop{display:flex;align-items:center;gap:10px}
+  .icon{font-size:1.6rem;line-height:1}
+  .name{font-weight:700;font-size:1.1rem}
+  .desc{color:var(--mut);font-size:.85rem;flex-grow:1}
+  .pill{align-self:flex-start;font-size:.72rem;padding:3px 10px;border-radius:20px;font-weight:600;
+    display:inline-flex;align-items:center;gap:5px}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .pill.live{background:#13251a;color:#4ade80;border:1px solid #1e3a28}
+  .pill.season{background:#13203a;color:#7aa7f0;border:1px solid #1e2f4a}
+  .pill.off{background:#1e2128;color:var(--off);border:1px solid var(--line)}
+  footer{color:var(--mut);font-size:.78rem;margin-top:32px;border-top:1px solid var(--line);padding-top:14px}
+  .arrow{margin-inline-start:auto;color:var(--mut);font-size:1.1rem}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="title">Prediction Engines</h1>
+    <div class="sub" id="subtitle">Applying a disciplined trading method to sports outcomes — each engine speaks only on high-confidence setups, and stays silent otherwise.</div>
+  </div>
+  <button class="toggle" id="langToggle">עב</button>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer id="footer"></footer>
+
+<script>
+// ====== רשימת המנועים — להוסיף מנוע = להוסיף איבר אחד כאן ======
+const ENGINES = [
+  {
+    id:"nba", icon:"🏀", url:"https://daani613-rgb.github.io/nba-dashboard/",
+    name:{en:"NBA", he:"NBA"},
+    desc:{en:"Elo + nine-stage read · 63.7% overall, 85% at high confidence",
+          he:"Elo + קריאת תשעה שלבים · 63.7% כללי, 85% בביטחון גבוה"},
+    status:"off",
+    statusText:{en:"Offseason — returns October", he:"מחוץ לעונה — חוזר באוקטובר"}
+  },
+  {
+    id:"worldcup", icon:"⚽", url:"https://daani613-rgb.github.io/worldcup-dashboard/",
+    name:{en:"World Cup 2026", he:"מונדיאל 2026"},
+    desc:{en:"International Elo + confidence discipline · ~78% on two-way calls",
+          he:"Elo בינלאומי + משמעת ביטחון · ~78% בקריאות 2-דרכי"},
+    status:"live",
+    statusText:{en:"Live — tournament on", he:"חי — הטורניר פעיל"}
+  },
+  {
+    id:"baseball", icon:"⚾", url:"https://daani613-rgb.github.io/baseball-dashboard/",
+    name:{en:"MLB", he:"בייסבול MLB"},
+    desc:{en:"Elo + stage discipline · A+ slice hit ~70% (cross-source verified)",
+          he:"Elo + משמעת שלבים · פרוסת A+ פגעה ב-~70% (אומת בין-מקורית)"},
+    status:"season",
+    statusText:{en:"In season", he:"בעונה"}
+  }
+];
+
+const I18N = {
+  en:{title:"Prediction Engines",
+      subtitle:"Applying a disciplined trading method to sports outcomes — each engine speaks only on high-confidence setups, and stays silent otherwise.",
+      footer:"Each engine is validated on held-out data and updates automatically every morning. Open any card to see today's calls and its live track record."},
+  he:{title:"מנועי חיזוי",
+      subtitle:"יישום שיטת מסחר ממושמעת על תוצאות ספורט — כל מנוע מדבר רק על סטאפים בביטחון גבוה, ושותק אחרת.",
+      footer:"כל מנוע מאומת על נתונים שלא נראו, ומתעדכן אוטומטית כל בוקר. פתח כל כרטיס כדי לראות את הקריאות של היום ואת ה-track record החי שלו."}
+};
+
+let lang = "en";
+
+function render(){
+  const L = I18N[lang];
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang==="he") ? "rtl" : "ltr";
+  document.getElementById("title").textContent = L.title;
+  document.getElementById("subtitle").textContent = L.subtitle;
+  document.getElementById("footer").textContent = L.footer;
+  document.getElementById("langToggle").textContent = (lang==="en") ? "עב" : "EN";
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  ENGINES.forEach(e=>{
+    const a = document.createElement("a");
+    a.className = "card";
+    a.href = e.url;
+    a.innerHTML = `
+      <div class="ctop">
+        <span class="icon">${e.icon}</span>
+        <span class="name">${e.name[lang]}</span>
+        <span class="arrow">${lang==="he"?"←":"→"}</span>
+      </div>
+      <div class="desc">${e.desc[lang]}</div>
+      <span class="pill ${e.status}"><span class="dot"></span>${e.statusText[lang]}</span>`;
+    grid.appendChild(a);
+  });
+}
+
+document.getElementById("langToggle").addEventListener("click",()=>{
+  lang = (lang==="en") ? "he" : "en"; render();
+});
+render();
+</script>
+</body>
+</html>
