@@ -38,13 +38,14 @@
   .pill.off{background:#1e2128;color:var(--off);border:1px solid var(--line)}
   footer{color:var(--mut);font-size:.78rem;margin-top:32px;border-top:1px solid var(--line);padding-top:14px}
   .arrow{margin-inline-start:auto;color:var(--mut);font-size:1.1rem}
+  .rec{font-size:.82rem;color:var(--txt)}
 </style>
 </head>
 <body>
 <header>
   <div>
     <h1 id="title">Prediction Engines</h1>
-    <div class="sub" id="subtitle">Applying a disciplined trading method to sports outcomes — each engine speaks only on high-confidence setups, and stays silent otherwise.</div>
+    <div class="sub" id="subtitle">Applying a disciplined trading method to sports outcomes: each engine speaks only on high-confidence setups, and stays silent otherwise.</div>
   </div>
   <button class="toggle" id="langToggle">עב</button>
 </header>
@@ -54,60 +55,98 @@
 <footer id="footer"></footer>
 
 <script>
-// ====== רשימת המנועים — להוסיף מנוע = להוסיף איבר אחד כאן ======
+// ====== The engines. Status and live record are read from each engine's own published data
+// (preview/<sport>/app.js, line 2 = window.REAL), never typed here. No data: no status claim, no number. ======
 const ENGINES = [
-  {
-    id:"nba", icon:"🏀", url:"https://daani613-rgb.github.io/nba-dashboard/",
+  { id:"nba", sp:"nba", icon:"🏀", url:"https://daani613-rgb.github.io/nba-dashboard/",
     name:{en:"NBA", he:"NBA"},
-    desc:{en:"Elo + nine-stage read · 63.7% overall, 85% at high confidence",
-          he:"Elo + קריאת תשעה שלבים · 63.7% כללי, 85% בביטחון גבוה"},
-    status:"off",
-    statusText:{en:"Offseason — returns October", he:"מחוץ לעונה — חוזר באוקטובר"}
-  },
-  {
-    id:"worldcup", icon:"⚽", url:"https://daani613-rgb.github.io/worldcup-dashboard/",
+    desc:{en:"Elo with a form stage; speaks on high-confidence calls only.", he:"Elo עם שלב צורה; מדבר רק על קריאות בביטחון גבוה."} },
+  { id:"worldcup", sp:"worldcup", icon:"⚽", url:"https://daani613-rgb.github.io/worldcup-dashboard/",
     name:{en:"World Cup 2026", he:"מונדיאל 2026"},
-    desc:{en:"International Elo + confidence discipline · ~78% on two-way calls",
-          he:"Elo בינלאומי + משמעת ביטחון · ~78% בקריאות 2-דרכי"},
-    status:"live",
-    statusText:{en:"Live — tournament on", he:"חי — הטורניר פעיל"}
-  },
-  {
-    id:"baseball", icon:"⚾", url:"https://daani613-rgb.github.io/baseball-dashboard/",
+    desc:{en:"International Elo with confidence discipline.", he:"Elo בינלאומי עם משמעת ביטחון."} },
+  { id:"baseball", sp:"mlb", icon:"⚾", url:"https://daani613-rgb.github.io/baseball-dashboard/",
     name:{en:"MLB", he:"בייסבול MLB"},
-    desc:{en:"Elo + stage discipline · A+ slice hit ~70% (cross-source verified)",
-          he:"Elo + משמעת שלבים · פרוסת A+ פגעה ב-~70% (אומת בין-מקורית)"},
-    status:"season",
-    statusText:{en:"In season", he:"בעונה"}
-  },
-  {
-    id:"tennis", icon:"🎾", url:"https://daani613-rgb.github.io/tennis-dashboard/",
+    desc:{en:"Elo with a form stage and the day's starting pitchers.", he:"Elo עם שלב צורה והזורקים הפותחים של היום."} },
+  { id:"tennis", sp:"tennis", icon:"🎾", url:"https://daani613-rgb.github.io/tennis-dashboard/",
     name:{en:"ATP Tennis", he:"טניס ATP"},
-    desc:{en:"Surface-blended Elo + stage discipline · 63.7% overall, ~77% A+ · forward CLV tracked",
-          he:"Elo משטח-משוקלל + משמעת שלבים · 63.7% כללי, ~77% A+ · CLV נמדד קדימה"},
-    status:"live",
-    statusText:{en:"Live — updates daily", he:"חי — מתעדכן יומית"}
-  },
-  {
-    id:"nfl", icon:"🏈", url:"https://daani613-rgb.github.io/nfl-dashboard/",
+    desc:{en:"Surface-blended Elo with a form stage; CLV measured forward.", he:"Elo משוקלל משטח עם שלב צורה; CLV נמדד קדימה."} },
+  { id:"nfl", sp:"nfl", icon:"🏈", url:"https://daani613-rgb.github.io/nfl-dashboard/",
     name:{en:"NFL", he:"NFL"},
-    desc:{en:"Elo (margin-aware) + nine-stage discipline · 64.6% overall, 78.4% on A+ (12% of games)",
-          he:"Elo (מודע-מרווח) + משמעת תשעה-שלבים · 64.6% כללי, 78.4% ב-A+ (12% מהמשחקים)"},
-    status:"off",
-    statusText:{en:"Offseason — kicks off September 9", he:"מחוץ לעונה — פתיחה ב-9 בספטמבר"}
-  }
+    desc:{en:"Margin-aware Elo with a form stage.", he:"Elo מודע-מרווח עם שלב צורה."} },
 ];
 
 const I18N = {
   en:{title:"Prediction Engines",
-      subtitle:"Applying a disciplined trading method to sports outcomes — each engine speaks only on high-confidence setups, and stays silent otherwise.",
-      footer:"Each engine is validated on held-out data and updates automatically every morning. Open any card to see today's calls and its live track record."},
+      subtitle:"Applying a disciplined trading method to sports outcomes: each engine speaks only on high-confidence setups, and stays silent otherwise.",
+      footer:"Status and record on each card are read from the engine's own published data. Each engine's page says when it last updated.",
+      loading:"Reading the engine's data…", na:"Status unavailable (the engine's data could not be read)"},
   he:{title:"מנועי חיזוי",
-      subtitle:"יישום שיטת מסחר ממושמעת על תוצאות ספורט — כל מנוע מדבר רק על סטאפים בביטחון גבוה, ושותק אחרת.",
-      footer:"כל מנוע מאומת על נתונים שלא נראו, ומתעדכן אוטומטית כל בוקר. פתח כל כרטיס כדי לראות את הקריאות של היום ואת ה-track record החי שלו."}
+      subtitle:"יישום שיטת מסחר ממושמעת על תוצאות ספורט: כל מנוע מדבר רק על סטאפים בביטחון גבוה, ושותק אחרת.",
+      footer:"הסטטוס והרשומה בכל כרטיס נקראים מהנתונים שהמנוע עצמו מפרסם. בדף של כל מנוע כתוב מתי עודכן לאחרונה.",
+      loading:"קורא את נתוני המנוע…", na:"הסטטוס לא זמין (לא ניתן לקרוא את נתוני המנוע)"}
+};
+
+const dm = d => { const m = String(d||"").match(/^(\d{4})-?(\d{2})-?(\d{2})/); return m ? `${m[3]}.${m[2]}` : ""; };
+const pct1 = (c, n) => (100 * c / n).toFixed(1);
+
+// status: {cls, en, he}; rec: {en, he} or null. Every value comes from R.
+const DERIVE = {
+  nfl: R => ({
+    status: R.state === "in_season" ? {cls:"live", en:`In season · week ${R.curWeek}`, he:`בעונה · שבוע ${R.curWeek}`}
+                                      : {cls:"off", en:"Between seasons", he:"בין עונות"},
+    rec: (R.seasonRecord && R.seasonRecord.n) ? {
+      en:`Season ${R.season}: ${R.seasonRecord.correct} of ${R.seasonRecord.n} right (${R.seasonRecord.pct}%)` + (R.aplusSeason && R.aplusSeason.n ? ` · A+ ${R.aplusSeason.correct} of ${R.aplusSeason.n}` : ""),
+      he:`עונת ${R.season}: ${R.seasonRecord.correct} מתוך ${R.seasonRecord.n} נכונות (${R.seasonRecord.pct}%)` + (R.aplusSeason && R.aplusSeason.n ? ` · A+ ${R.aplusSeason.correct} מתוך ${R.aplusSeason.n}` : "") } : null }),
+  nba: R => ({
+    status: R.isOffseason ? {cls:"off", en:"Off-season" + (R.nextGame && R.nextGame.date ? ` · next game ${dm(R.nextGame.date)}` : ""),
+                                         he:"מחוץ לעונה" + (R.nextGame && R.nextGame.date ? ` · המשחק הבא ${dm(R.nextGame.date)}` : "")}
+                          : {cls:"live", en:"In season", he:"בעונה"},
+    rec: null }),   // no live record yet: the figures on its page are a walk-forward reconstruction, not live calls
+  mlb: R => ({
+    status: (R.slate && R.slate.games > 0) ? {cls:"live", en:`Games on ${dm(R.slate.date)}: ${R.slate.games}`, he:`משחקים ב-${dm(R.slate.date)}: ${R.slate.games}`}
+                                           : {cls:"off", en:"No games on the slate", he:"אין משחקים בלוח"},
+    rec: (R.liveRecord && R.liveRecord.calls) ? {
+      en:`Live A+ record ${R.liveRecord.season}: ${R.liveRecord.correct} of ${R.liveRecord.calls} (${pct1(R.liveRecord.correct, R.liveRecord.calls)}%)`,
+      he:`רשומת A+ חיה ${R.liveRecord.season}: ${R.liveRecord.correct} מתוך ${R.liveRecord.calls} (${pct1(R.liveRecord.correct, R.liveRecord.calls)}%)`} : null }),
+  tennis: R => {
+    const today = new Date().toISOString().slice(0, 10);
+    const paused = R.quotaPauseUntil && today < R.quotaPauseUntil;
+    const A = R.accuracy || {};
+    const c = A.journal_n ? Math.round(A.journal_acc * A.journal_n / 100) : null;
+    const ca = A.journal_aplus_n ? Math.round(A.journal_aplus_acc * A.journal_aplus_n / 100) : null;
+    return {
+      status: paused ? {cls:"off", en:`Paused until ${dm(R.quotaPauseUntil)} (odds quota)`, he:`מושהה עד ${dm(R.quotaPauseUntil)} (מכסת יחסים)`}
+                     : {cls:"live", en:"Running", he:"פעיל"},
+      rec: A.journal_n ? {
+        en:`Journal: ${c} of ${A.journal_n} right (${A.journal_acc}%)` + (ca != null ? ` · A+ ${ca} of ${A.journal_aplus_n}` : ""),
+        he:`יומן: ${c} מתוך ${A.journal_n} נכונות (${A.journal_acc}%)` + (ca != null ? ` · A+ ${ca} מתוך ${A.journal_aplus_n}` : "")} : null };
+  },
+  worldcup: R => {
+    const ms = R.matches || [];
+    const done = ms.length > 0 && ms.every(m => m.decided);
+    const last = ms.map(m => m.date).filter(Boolean).sort().pop();
+    const A = R.accuracy || {};
+    return {
+      status: done ? {cls:"off", en:`Tournament ended · ${dm(last)}`, he:`הטורניר הסתיים · ${dm(last)}`}
+                   : {cls:"live", en:"Tournament on", he:"הטורניר פעיל"},
+      rec: A.n_called ? {en:`A+ calls: ${A.n_correct} of ${A.n_called} right (${A.aplus}%)`,
+                         he:`קריאות A+: ${A.n_correct} מתוך ${A.n_called} נכונות (${A.aplus}%)`} : null };
+  },
 };
 
 let lang = "en";
+const DATA = {};   // sp -> {status, rec} | "na"
+
+function loadAll(){
+  ENGINES.forEach(e => {
+    fetch(`./preview/${e.sp}/app.js`, {cache:"no-store"})
+      .then(r => r.ok ? r.text() : Promise.reject(r.status))
+      .then(txt => { const line = txt.split("\n")[1] || ""; const R = JSON.parse(line.slice(line.indexOf("=") + 1).trim().replace(/;$/, ""));
+                     DATA[e.sp] = DERIVE[e.sp](R); })
+      .catch(() => { DATA[e.sp] = "na"; })
+      .finally(render);
+  });
+}
 
 function render(){
   const L = I18N[lang];
@@ -117,10 +156,12 @@ function render(){
   document.getElementById("subtitle").textContent = L.subtitle;
   document.getElementById("footer").textContent = L.footer;
   document.getElementById("langToggle").textContent = (lang==="en") ? "עב" : "EN";
-
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
-  ENGINES.forEach(e=>{
+  ENGINES.forEach(e => {
+    const d = DATA[e.sp];
+    const st = d === "na" ? {cls:"off", en:L.na, he:L.na} : (d ? d.status : {cls:"off", en:L.loading, he:L.loading});
+    const rec = (d && d !== "na" && d.rec) ? `<div class="rec">${d.rec[lang]}</div>` : "";
     const a = document.createElement("a");
     a.className = "card";
     a.href = e.url;
@@ -130,16 +171,15 @@ function render(){
         <span class="name">${e.name[lang]}</span>
         <span class="arrow">${lang==="he"?"←":"→"}</span>
       </div>
-      <div class="desc">${e.desc[lang]}</div>
-      <span class="pill ${e.status}"><span class="dot"></span>${e.statusText[lang]}</span>`;
+      <div class="desc">${e.desc[lang]}</div>${rec}
+      <span class="pill ${st.cls}"><span class="dot"></span>${st[lang]}</span>`;
     grid.appendChild(a);
   });
 }
 
-document.getElementById("langToggle").addEventListener("click",()=>{
-  lang = (lang==="en") ? "he" : "en"; render();
-});
+document.getElementById("langToggle").addEventListener("click", () => { lang = (lang === "en") ? "he" : "en"; render(); });
 render();
+loadAll();
 </script>
 </body>
 </html>
