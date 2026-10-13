@@ -35,10 +35,12 @@
   .pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
   .pill.live{background:#13251a;color:#4ade80;border:1px solid #1e3a28}
   .pill.season{background:#13203a;color:#7aa7f0;border:1px solid #1e2f4a}
-  .pill.off{background:#1e2128;color:var(--off);border:1px solid var(--line)}
+  .pill.off{background:#1e2128;color:#848a96;border:1px solid var(--line)}
   footer{color:var(--mut);font-size:.78rem;margin-top:32px;border-top:1px solid var(--line);padding-top:14px}
   .arrow{margin-inline-start:auto;color:var(--mut);font-size:1.1rem}
   .rec{font-size:.82rem;color:var(--txt)}
+  /* tap targets at least 44 x 44 px (KNOWN_DEFECTS 92) */
+  button{min-height:44px;min-width:44px}
 </style>
 </head>
 <body>
@@ -180,6 +182,38 @@ function render(){
 document.getElementById("langToggle").addEventListener("click", () => { lang = (lang === "en") ? "he" : "en"; render(); });
 render();
 loadAll();
+</script>
+<script>/* minus sign in RTL (KNOWN_DEFECTS 89), same code as preview/assets/bidi.js */
+(function () {
+  // A minus that starts a number gets an LRM (U+200E) before it, so in a Hebrew (RTL) line "-15%" keeps its minus on
+  // the left instead of showing as "15%-" (KNOWN_DEFECTS 89). Text only, every render: values are never changed, an
+  // LRM is invisible, and in English (LTR) it changes nothing. Not a minus: a hyphen after a letter, digit or %
+  // ("A-1", "4-3", "2026-10-13", "ב-29.11", "3%-10%"). Idempotent: a minus that already has its LRM is left alone.
+  var RE = /(^|[^\d\w.,%֐-׿‎])([-−])(?=\d)/g, SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, TEMPLATE: 1, NOSCRIPT: 1 };
+  function fix(n) {
+    var t = n.nodeValue;
+    if (!t || (t.indexOf('-') < 0 && t.indexOf('−') < 0) || !n.parentNode || SKIP[n.parentNode.nodeName]) return;
+    var u = t.replace(RE, '$1‎$2');
+    if (u !== t) n.nodeValue = u;
+  }
+  function walk(r) {
+    if (r.nodeType === 3) return fix(r);
+    if (r.nodeType !== 1 || SKIP[r.nodeName]) return;
+    var w = document.createTreeWalker(r, 4, null), n;
+    while ((n = w.nextNode())) fix(n);
+  }
+  function start() {
+    walk(document.body);
+    new MutationObserver(function (ms) {
+      for (var i = 0; i < ms.length; i++) {
+        var m = ms[i];
+        if (m.type === 'characterData') fix(m.target);
+        else for (var j = 0; j < m.addedNodes.length; j++) walk(m.addedNodes[j]);
+      }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
 </script>
 </body>
 </html>
