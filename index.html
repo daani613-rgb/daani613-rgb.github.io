@@ -124,9 +124,9 @@ const DERIVE = {
         he:`יומן: ${c} מתוך ${A.journal_n} נכונות (${A.journal_acc}%)` + (ca != null ? ` · A+ ${ca} מתוך ${A.journal_aplus_n}` : "")} : null };
   },
   worldcup: R => {
-    const ms = R.matches || [];
-    const done = ms.length > 0 && ms.every(m => m.decided);
-    const last = ms.map(m => m.date).filter(Boolean).sort().pop();
+    const ms = R.matches || [];   // from the payload; from status.json: all_decided and last_match_date
+    const done = R.all_decided !== undefined ? R.all_decided : (ms.length > 0 && ms.every(m => m.decided));
+    const last = R.last_match_date !== undefined ? R.last_match_date : ms.map(m => m.date).filter(Boolean).sort().pop();
     const A = R.accuracy || {};
     return {
       status: done ? {cls:"off", en:`Tournament ended · ${dm(last)}`, he:`הטורניר הסתיים · ${dm(last)}`}
@@ -139,13 +139,23 @@ const DERIVE = {
 let lang = "en";
 const DATA = {};   // sp -> {status, rec} | "na"
 
+// status.json first (about 0.2 KB per engine; its "hub" holds the fields DERIVE reads, copied from the payload by the
+// generator, STATUS_JSON_PREREGISTER.md in the preview repo); missing, not JSON or not of that shape: the payload, as before.
+const okStatus = (j, sp) => !!j && j.v === 1 && j.engine === sp && typeof j.open_call === "boolean"
+  && (j.last_data_date === null || /^\d{4}-\d{2}-\d{2}$/.test(String(j.last_data_date))) && !!j.hub && typeof j.hub === "object";
+function fromPayload(e){
+  return fetch(`./preview/${e.sp}/app.js`, {cache:"no-store"})
+    .then(r => r.ok ? r.text() : Promise.reject(r.status))
+    .then(txt => { const line = txt.split("\n")[1] || ""; const R = JSON.parse(line.slice(line.indexOf("=") + 1).trim().replace(/;$/, ""));
+                   DATA[e.sp] = DERIVE[e.sp](R); })
+    .catch(() => { DATA[e.sp] = "na"; });
+}
 function loadAll(){
   ENGINES.forEach(e => {
-    fetch(`./preview/${e.sp}/app.js`, {cache:"no-store"})
-      .then(r => r.ok ? r.text() : Promise.reject(r.status))
-      .then(txt => { const line = txt.split("\n")[1] || ""; const R = JSON.parse(line.slice(line.indexOf("=") + 1).trim().replace(/;$/, ""));
-                     DATA[e.sp] = DERIVE[e.sp](R); })
-      .catch(() => { DATA[e.sp] = "na"; })
+    fetch(`./preview/${e.sp}/status.json`, {cache:"no-store"})
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(j => { if (!okStatus(j, e.sp)) throw new Error("status.json shape"); DATA[e.sp] = DERIVE[e.sp](j.hub); })
+      .catch(() => fromPayload(e))
       .finally(render);
   });
 }
