@@ -154,7 +154,10 @@ function loadAll(){
   ENGINES.forEach(e => {
     fetch(`./preview/${e.sp}/status.json`, {cache:"no-store"})
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(j => { if (!okStatus(j, e.sp)) throw new Error("status.json shape"); DATA[e.sp] = DERIVE[e.sp](j.hub); })
+      .then(j => { if (!okStatus(j, e.sp)) throw new Error("status.json shape"); DATA[e.sp] = DERIVE[e.sp](j.hub);
+                   // C_HUB_STALE_PREREGISTER.md: status.json written more than 36 h ago -> "not updated"
+                   const bt = j.built_utc ? Date.parse(j.built_utc) : NaN;
+                   DATA[e.sp].stale = !isNaN(bt) && (Date.now() - bt) > 36 * 3600 * 1000; })
       .catch(() => fromPayload(e))
       .finally(render);
   });
@@ -184,7 +187,8 @@ function render(){
         <span class="arrow">${lang==="he"?"←":"→"}</span>
       </div>
       <div class="desc">${e.desc[lang]}</div>${rec}
-      <span class="pill ${st.cls}"><span class="dot"></span>${st[lang]}</span>`;
+      <span class="pill ${st.cls}"><span class="dot"></span>${st[lang]}</span>${(d && d !== "na" && d.stale) ? `
+      <span class="pill" style="color:#f5b23d;border-color:rgba(245,178,61,0.45)">${lang==="he" ? "לא עודכן 36+ שעות" : "Not updated for 36+ h"}</span>` : ""}`;
     grid.appendChild(a);
   });
 }
